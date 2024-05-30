@@ -38,7 +38,7 @@ exports.insertNewPhoto = insertNewPhoto
  */
 async function getPhotoById(id) {
   const db = getDbReference()
-  const collection = db.collection('photos')
+  const collection = db.collection('images.files')
   if (!ObjectId.isValid(id)) {
     return null
   } else {

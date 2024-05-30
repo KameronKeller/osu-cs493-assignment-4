@@ -6,6 +6,8 @@ const multer = require("multer");
 const { Readable } = require('stream')
 const { Router } = require("express");
 const { GridFSBucket } = require("mongodb");
+const crypto = require("crypto");
+const { ObjectId } = require('mongodb')
 
 const { validateAgainstSchema } = require("../lib/validation");
 const { getDbReference } = require("../lib/mongo");
@@ -22,17 +24,29 @@ const {
 
 const router = Router();
 
+const imageTypes = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png'
+};
+
+function isValidMimeType(mimetype) {
+  return !!imageTypes[mimetype]
+}
+
 function saveImageFile(image) {
   return new Promise((resolve, reject) => {
     const db = getDbReference();
     const bucket = new GridFSBucket(db, { bucketName: 'images' });
+    const filename = crypto.pseudoRandomBytes(16).toString("hex");
+    const extension = imageTypes[image.contentType];
+
     const metadata = {
       contentType: image.contentType,
-      businessId: image.businessId,
+      businessId: new ObjectId(image.businessId),
       caption: image.caption
     };
     const uploadStream = bucket.openUploadStream(
-      'asdf',
+      `${filename}.${extension}`,
       { metadata: metadata }
     );
     const stream = new Readable.from(image.buffer)
@@ -77,9 +91,10 @@ function saveImageFile(image) {
 router.post("/", upload.single("upload"), async (req, res, next) => {
   console.log("req.body = " + JSON.stringify(req.body, null, 4));
 
-  // TODO: Fix this if statement
-  // if (req.file && req.body && req.body.userId) {
-  if (true) {
+  if (
+    validateAgainstSchema(req.body, PhotoSchema) &&
+    isValidMimeType(req.file.mimetype)
+  ) {
     try {
       const image = {
         contentType: req.file.mimetype,
@@ -88,13 +103,20 @@ router.post("/", upload.single("upload"), async (req, res, next) => {
         buffer: req.file.buffer,
       };
       const id = await saveImageFile(image);
-      res.status(200).send({ id: id });
+      res.status(201).send({
+        id: id,
+        links: {
+          photo: `/photos/${id}`,
+          business: `/businesses/${req.body.businessId}`,
+        },
+      });
     } catch (err) {
+      console.error(err);
       next(err);
     }
   } else {
     res.status(400).send({
-      err: "Request body needs'image' file and 'userId'.",
+      err: "Request body is not a valid photo object",
     });
   }
 });
