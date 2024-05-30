@@ -59,32 +59,6 @@ function saveImageFile(image) {
   });
 }
 
-
-
-// router.post('/', async (req, res) => {
-//   if (validateAgainstSchema(req.body, PhotoSchema)) {
-//     try {
-//       const id = await insertNewPhoto(req.body)
-//       res.status(201).send({
-//         id: id,
-//         links: {
-//           photo: `/photos/${id}`,
-//           business: `/businesses/${req.body.businessId}`
-//         }
-//       })
-//     } catch (err) {
-//       console.error(err)
-//       res.status(500).send({
-//         error: "Error inserting photo into DB.  Please try again later."
-//       })
-//     }
-//   } else {
-//     res.status(400).send({
-//       error: "Request body is not a valid photo object"
-//     })
-//   }
-// })
-
 /*
  * POST /photos - Route to create a new photo.
  */
@@ -108,6 +82,8 @@ router.post("/", upload.single("upload"), async (req, res, next) => {
         links: {
           photo: `/photos/${id}`,
           business: `/businesses/${req.body.businessId}`,
+          photoUrl: `/media/photos/${id}.${imageTypes[req.file.mimetype]}`,
+          thumbnail: `/media/thumbs/${id}.${imageTypes[req.file.mimetype]}`
         },
       });
     } catch (err) {
@@ -128,6 +104,8 @@ router.get('/:id', async (req, res, next) => {
   try {
     const photo = await getPhotoById(req.params.id)
     if (photo) {
+      photo.photoUrl = `/media/photos/${photo._id}.${imageTypes[photo.metadata.contentType]}`
+      photo.thumbnail = `/media/thumbs/${photo._id}.${imageTypes[photo.metadata.contentType]}`
       res.status(200).send(photo)
     } else {
       next()
