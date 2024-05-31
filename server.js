@@ -3,6 +3,7 @@ const morgan = require('morgan')
 
 const api = require('./api')
 const { connectToDb } = require('./lib/mongo')
+const { connectToMq } = require('./lib/messageQueue')
 
 const app = express()
 const port = process.env.PORT || 8000
@@ -28,8 +29,18 @@ app.use('*', function (req, res, next) {
   })
 })
 
+// TODO: I want to use this to catch errors
+// app.use('*', (err, req, res, next) => {
+//   console.error(err);
+//   res.status(500).send({
+//     err: "An error occurred. Try again later."
+//   });
+// });
+
 connectToDb(function () {
-  app.listen(port, function () {
-    console.log("== Server is running on port", port)
+  connectToMq(function () {
+    app.listen(port, function () {
+      console.log("== Server is running on port", port)
+    })
   })
 })
