@@ -3,6 +3,7 @@
  */
 
 const { ObjectId, GridFSBucket } = require('mongodb')
+const sharp = require('sharp');
 
 const { getDbReference } = require('../lib/mongo')
 const { extractValidFields } = require('../lib/validation')
@@ -49,11 +50,70 @@ async function getPhotoById(id) {
   }
 }
 
-exports.getDownloadStreamByFilename = function (filename) {
+function saveThumbFile(id, buffer) {
+  return new Promise((resolve, reject) => {
+    const db = getDbReference();
+    const bucket = new GridFSBucket(db, { bucketName: 'images' });
+    const filename = `${id}.jpg`
+
+    const metadata = {
+      contentType: 'image/jpeg',
+    };
+    const uploadStream = bucket.openUploadStream(
+      filename,
+      { metadata: metadata }
+    );
+    const stream = new Readable.from(buffer)
+    stream.pipe(uploadStream).on('error', (err) => {
+      reject(err);
+    })
+    .on('finish', (result) => {
+      resolve(result._id);
+    });
+  });
+}
+
+getDownloadStreamByFilename = function (filename) {
   const db = getDbReference();
   const bucket = new GridFSBucket(db, { bucketName: 'images' });
   return bucket.openDownloadStreamByName(filename);
 };
 
+getDownloadStreamById = async function (id) {
+  const photo = await getPhotoById(id)
+  console.log("== photo", photo);
+  return getDownloadStreamByFilename(photo.filename)
+}
+
+exports.createThumb = async function (id) {
+  return new Promise(async (resolve, reject) => {
+  const thumbnailCreator = sharp()
+    .resize(100, 100)
+    .jpeg()
+
+    const db = getDbReference();
+    const bucket = new GridFSBucket(db, { bucketName: 'thumbs' });
+    const filename = `${id}.jpg`
+
+    const metadata = {
+      contentType: 'image/jpeg',
+    };
+    const uploadStream = bucket.openUploadStream(
+      filename,
+      { metadata: metadata }
+    );
+
+    const downloadStream = await getDownloadStreamById(id)
+
+    downloadStream.pipe(thumbnailCreator).pipe(uploadStream).on('error', (err) => {
+    reject(err);
+  })
+  .on('finish', (result) => {
+    resolve(result)
+  });
+  })
+};
+
 exports.getPhotoById = getPhotoById
 exports.getDownloadStreamByFilename = this.getDownloadStreamByFilename
+exports.getDownloadStreamByFilename = getDownloadStreamByFilename
