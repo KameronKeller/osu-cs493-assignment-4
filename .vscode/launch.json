@@ -4,11 +4,10 @@
                     "// For more information, visit: https://go.microsoft.com/fwlink/?linkid": "830387",
     "version": "0.2.0",
     "configurations": [
-
         {
             "type": "node",
             "request": "launch",
-            "name": "Launch Program",
+            "name": "Launch server",
             "skipFiles": [
                 "<node_internals>/**"
             ],
@@ -18,7 +17,25 @@
                 "MONGO_ROOT_USER": "root",
                 "MONGO_ROOT_PASSWORD": "hunter2",
                 "MONGO_USER": "businesses",
-                "MONGO_PASSWORD": "hunter2"
+                "MONGO_PASSWORD": "hunter2",
+                "RABBITMQ_HOST": "localhost"
+            }
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Launch image resizer",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "program": "${workspaceFolder}/thumbCreator.js",
+            "env": {
+                "MONGO_DB_NAME": "businesses",
+                "MONGO_ROOT_USER": "root",
+                "MONGO_ROOT_PASSWORD": "hunter2",
+                "MONGO_USER": "businesses",
+                "MONGO_PASSWORD": "hunter2",
+                "RABBITMQ_HOST": "localhost"
             }
         }
     ]
