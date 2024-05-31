@@ -21,6 +21,7 @@ const {
   insertNewPhoto,
   getPhotoById,
 } = require("../models/photo");
+const { getMqReference, thumbQueue } = require("../lib/messageQueue");
 
 const router = Router();
 
@@ -59,6 +60,20 @@ function saveImageFile(image) {
   });
 }
 
+
+
+// async function addToThumbQueue(photo) {
+//   try {
+//     const connection = await amqp.connect(rabbitmqUrl);
+//     const channel = await connection.createChannel();
+//     await channel.assertQueue('generateThumb');
+//     setTimeout(() => { connection.close(); }, 500);
+//   } catch (err) {
+//     console.error(err);
+//   }
+// }
+
+
 /*
  * POST /photos - Route to create a new photo.
  */
@@ -77,6 +92,8 @@ router.post("/", upload.single("upload"), async (req, res, next) => {
         buffer: req.file.buffer,
       };
       const id = await saveImageFile(image);
+      const mq = getMqReference()
+      mq.sendToQueue(thumbQueue, Buffer.from(id.toString()))
       res.status(201).send({
         id: id,
         links: {
