@@ -2,34 +2,34 @@
  * Photo schema and data accessor methods.
  */
 
-const { ObjectId, GridFSBucket } = require('mongodb')
-const sharp = require('sharp');
+const { ObjectId, GridFSBucket } = require("mongodb");
+const sharp = require("sharp");
 
-const { getDbReference } = require('../lib/mongo')
-const { extractValidFields } = require('../lib/validation')
+const { getDbReference } = require("../lib/mongo");
+const { extractValidFields } = require("../lib/validation");
 
 /*
  * Schema describing required/optional fields of a photo object.
  */
 const PhotoSchema = {
   businessId: { required: true },
-  caption: { required: false }
-}
-exports.PhotoSchema = PhotoSchema
+  caption: { required: false },
+};
+exports.PhotoSchema = PhotoSchema;
 
 /*
  * Executes a DB query to insert a new photo into the database.  Returns
  * a Promise that resolves to the ID of the newly-created photo entry.
  */
 async function insertNewPhoto(photo) {
-  photo = extractValidFields(photo, PhotoSchema)
-  photo.businessId = ObjectId(photo.businessId)
-  const db = getDbReference()
-  const collection = db.collection('photos')
-  const result = await collection.insertOne(photo)
-  return result.insertedId
+  photo = extractValidFields(photo, PhotoSchema);
+  photo.businessId = ObjectId(photo.businessId);
+  const db = getDbReference();
+  const collection = db.collection("photos");
+  const result = await collection.insertOne(photo);
+  return result.insertedId;
 }
-exports.insertNewPhoto = insertNewPhoto
+exports.insertNewPhoto = insertNewPhoto;
 
 /*
  * Executes a DB query to fetch a single specified photo based on its ID.
@@ -38,40 +38,15 @@ exports.insertNewPhoto = insertNewPhoto
  * will resolve to null.
  */
 async function getPhotoById(id, dbCollection) {
-  const db = getDbReference()
+  const db = getDbReference();
   // const collection = db.collection('images.files')
-  const collection = db.collection(dbCollection)
+  const collection = db.collection(dbCollection);
   if (!ObjectId.isValid(id)) {
-    return null
+    return null;
   } else {
-    const results = await collection
-      .find({ _id: new ObjectId(id) })
-      .toArray()
-    return results[0]
+    const results = await collection.find({ _id: new ObjectId(id) }).toArray();
+    return results[0];
   }
-}
-
-function saveThumbFile(id, buffer) {
-  return new Promise((resolve, reject) => {
-    const db = getDbReference();
-    const bucket = new GridFSBucket(db, { bucketName: 'images' });
-    const filename = `${id}.jpg`
-
-    const metadata = {
-      contentType: 'image/jpeg',
-    };
-    const uploadStream = bucket.openUploadStream(
-      filename,
-      { metadata: metadata }
-    );
-    const stream = new Readable.from(buffer)
-    stream.pipe(uploadStream).on('error', (err) => {
-      reject(err);
-    })
-    .on('finish', (result) => {
-      resolve(result._id);
-    });
-  });
 }
 
 const getDownloadStreamByFilename = function (filename, dbBucket) {
@@ -81,45 +56,47 @@ const getDownloadStreamByFilename = function (filename, dbBucket) {
 };
 
 const getDownloadStreamById = async function (id, dbCollection, dbBucket) {
-  const photo = await getPhotoById(id, dbCollection)
-  console.log("== photo", photo);
-  return getDownloadStreamByFilename(photo.filename, dbBucket)
-}
+  const photo = await getPhotoById(id, dbCollection);
+  return getDownloadStreamByFilename(photo.filename, dbBucket);
+};
 
 exports.createThumb = async function (id) {
   return new Promise(async (resolve, reject) => {
-  const thumbnailCreator = sharp()
-    .resize(100, 100)
-    .jpeg()
+    const thumbnailCreator = sharp().resize(100, 100).jpeg();
 
     const db = getDbReference();
-    const bucket = new GridFSBucket(db, { bucketName: 'thumbs' });
-    const filename = `${id}.jpg`
+    const bucket = new GridFSBucket(db, { bucketName: "thumbs" });
+    const filename = `${id}.jpg`;
 
     const metadata = {
-      contentType: 'image/jpeg',
+      contentType: "image/jpeg",
     };
-    const uploadStream = bucket.openUploadStream(
-      filename,
-      { metadata: metadata }
+    const uploadStream = bucket.openUploadStream(filename, {
+      metadata: metadata,
+    });
+
+    const downloadStream = await getDownloadStreamById(
+      id,
+      "images.files",
+      "images"
     );
 
-    const downloadStream = await getDownloadStreamById(id, 'images.files', 'images')
-
-    downloadStream.pipe(thumbnailCreator).pipe(uploadStream).on('error', (err) => {
-    reject(err);
-  })
-  .on('finish', (result) => {
-    const dbAdd = db.collection("images.files").updateOne(
-      { _id: ObjectId(id) },
-      { $set: { "metadata.thumbId": result._id } }
-    );
-    console.log("== dbAdd", dbAdd);
-    resolve(result)
+    downloadStream
+      .pipe(thumbnailCreator)
+      .pipe(uploadStream)
+      .on("error", (err) => {
+        reject(err);
+      })
+      .on("finish", (result) => {
+        db.collection("images.files").updateOne(
+          { _id: ObjectId(id) },
+          { $set: { "metadata.thumbId": result._id } }
+        );
+        resolve(result);
+      });
   });
-  })
 };
 
-exports.getPhotoById = getPhotoById
-exports.getDownloadStreamByFilename = this.getDownloadStreamByFilename
-exports.getDownloadStreamByFilename = getDownloadStreamByFilename
+exports.getPhotoById = getPhotoById;
+exports.getDownloadStreamByFilename = this.getDownloadStreamByFilename;
+exports.getDownloadStreamByFilename = getDownloadStreamByFilename;
