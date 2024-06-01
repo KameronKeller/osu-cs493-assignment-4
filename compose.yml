@@ -21,6 +21,28 @@ services:
     restart: on-failure
     command: npm run initdb
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    hostname: rabbitmq
+    ports:
+      - 5672:5672
+      - 15672:15672
+  
+  thumb-creator-worker:
+    build: .
+    environment:
+      MONGO_HOST: db
+      MONGO_USER: ${MONGO_USER}
+      MONGO_PASSWORD: ${MONGO_PASSWORD}
+      MONGO_DB_NAME: ${MONGO_DB_NAME}
+      RABBITMQ_HOST: rabbitmq
+    depends_on:
+      - db
+      - db-init
+      - rabbitmq
+    restart: on-failure
+    command: npm run startworker
+    
   api:
     build: .
     ports:
@@ -30,7 +52,10 @@ services:
       MONGO_USER: ${MONGO_USER}
       MONGO_PASSWORD: ${MONGO_PASSWORD}
       MONGO_DB_NAME: ${MONGO_DB_NAME}
+      RABBITMQ_HOST: rabbitmq
     depends_on:
       - db
       - db-init
+      - rabbitmq
+      - thumb-creator-worker
     restart: on-failure
