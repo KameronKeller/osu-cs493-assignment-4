@@ -81,7 +81,7 @@ router.post("/", upload.single("upload"), async (req, res, next) => {
           photo: `/photos/${id}`,
           business: `/businesses/${req.body.businessId}`,
           photoUrl: `/media/photos/${id}.${imageTypes[req.file.mimetype]}`,
-          thumbnail: `/media/thumbs/${id}.${imageTypes[req.file.mimetype]}`,
+          thumbnail: `/media/thumbs/${id}.jpg`,
         },
       });
     } catch (err) {
