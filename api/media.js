@@ -126,7 +126,7 @@ async function getPhotoByFileName(filename) {
   // get the id from the filename
   const id = filename.split(".")[0]
   // get the photo
-  const photo = await getPhotoById(id)
+  const photo = await getPhotoById(id, 'images.files')
   // check if it exists and the mimetype matches (could just check that the filename matches)
   if (photo) {
       // return the photo if it exists, otherwise return null
@@ -156,9 +156,46 @@ async function getPhotoByFileName(filename) {
 //   }
 // })
 
+// async function sendRequestedFile(req, res, next, collection) {
+//   const photo = await getPhotoByFileName(req.params.filename)
+//   getDownloadStreamByFilename(photo.filename)
+//     .on('error', (err) => {
+//       if (err.code === 'ENOENT') {
+//         next();
+//       } else {
+//         next(err);
+//       }
+//     })
+//     .on('file', (file) => {
+//       res.status(200).type(file.metadata.contentType);
+//     })
+//     .pipe(res);
+// }
+
 router.get('/photos/:filename', async (req, res, next) => {
+  // sendRequestedFile(req, res, next, 'images.files')
   const photo = await getPhotoByFileName(req.params.filename)
-  getDownloadStreamByFilename(photo.filename)
+  getDownloadStreamByFilename(photo.filename, 'images')
+    .on('error', (err) => {
+      if (err.code === 'ENOENT') {
+        next();
+      } else {
+        next(err);
+      }
+    })
+    .on('file', (file) => {
+      res.status(200).type(file.metadata.contentType);
+    })
+    .pipe(res);
+});
+
+router.get('/thumbs/:filename', async (req, res, next) => {
+  // sendRequestedFile(req, res, next, 'thumbs.files')
+  const photo = await getPhotoByFileName(req.params.filename)
+  console.log("== photo.metadata.thumbId", photo.metadata.thumbId);
+  const thumb = await getPhotoById(photo.metadata.thumbId, 'thumbs.files')
+  console.log("== thumb", thumb);
+  getDownloadStreamByFilename(thumb.filename, 'thumbs')
     .on('error', (err) => {
       if (err.code === 'ENOENT') {
         next();

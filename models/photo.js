@@ -37,9 +37,10 @@ exports.insertNewPhoto = insertNewPhoto
  * photo.  If no photo with the specified ID exists, the returned Promise
  * will resolve to null.
  */
-async function getPhotoById(id) {
+async function getPhotoById(id, dbCollection) {
   const db = getDbReference()
-  const collection = db.collection('images.files')
+  // const collection = db.collection('images.files')
+  const collection = db.collection(dbCollection)
   if (!ObjectId.isValid(id)) {
     return null
   } else {
@@ -73,16 +74,16 @@ function saveThumbFile(id, buffer) {
   });
 }
 
-getDownloadStreamByFilename = function (filename) {
+const getDownloadStreamByFilename = function (filename, dbBucket) {
   const db = getDbReference();
-  const bucket = new GridFSBucket(db, { bucketName: 'images' });
+  const bucket = new GridFSBucket(db, { bucketName: dbBucket });
   return bucket.openDownloadStreamByName(filename);
 };
 
-getDownloadStreamById = async function (id) {
-  const photo = await getPhotoById(id)
+const getDownloadStreamById = async function (id, dbCollection, dbBucket) {
+  const photo = await getPhotoById(id, dbCollection)
   console.log("== photo", photo);
-  return getDownloadStreamByFilename(photo.filename)
+  return getDownloadStreamByFilename(photo.filename, dbBucket)
 }
 
 exports.createThumb = async function (id) {
@@ -103,12 +104,17 @@ exports.createThumb = async function (id) {
       { metadata: metadata }
     );
 
-    const downloadStream = await getDownloadStreamById(id)
+    const downloadStream = await getDownloadStreamById(id, 'images.files', 'images')
 
     downloadStream.pipe(thumbnailCreator).pipe(uploadStream).on('error', (err) => {
     reject(err);
   })
   .on('finish', (result) => {
+    const dbAdd = db.collection("images.files").updateOne(
+      { _id: ObjectId(id) },
+      { $set: { "metadata.thumbId": result._id } }
+    );
+    console.log("== dbAdd", dbAdd);
     resolve(result)
   });
   })

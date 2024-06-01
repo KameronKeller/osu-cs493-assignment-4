@@ -119,7 +119,7 @@ router.post("/", upload.single("upload"), async (req, res, next) => {
  */
 router.get('/:id', async (req, res, next) => {
   try {
-    const photo = await getPhotoById(req.params.id)
+    const photo = await getPhotoById(req.params.id, 'images.files')
     if (photo) {
       photo.photoUrl = `/media/photos/${photo._id}.${imageTypes[photo.metadata.contentType]}`
       photo.thumbnail = `/media/thumbs/${photo._id}.${imageTypes[photo.metadata.contentType]}`
