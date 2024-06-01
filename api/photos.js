@@ -105,9 +105,7 @@ router.get("/:id", async (req, res, next) => {
       photo.photoUrl = `/media/photos/${photo._id}.${
         imageTypes[photo.metadata.contentType]
       }`;
-      photo.thumbnail = `/media/thumbs/${photo._id}.${
-        imageTypes[photo.metadata.contentType]
-      }`;
+      photo.thumbnail = `/media/thumbs/${photo._id}.jpg`;
       res.status(200).send(photo);
     } else {
       next();
